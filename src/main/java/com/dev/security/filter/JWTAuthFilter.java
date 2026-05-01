@@ -10,7 +10,7 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.filter.OncePerRequestFilter;
-import tools.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.io.IOException;
 
@@ -31,12 +31,18 @@ public class JWTAuthFilter extends OncePerRequestFilter {
                                     FilterChain filterChain
     ) throws ServletException, IOException {
 
+         if(!request.getServletPath().equals("/auth/login"))
+         {
+             filterChain.doFilter(request, response);
+             return;
+         }
+
         // parse the request and fetch userName and password;
         ObjectMapper objectMapper = new ObjectMapper();
         LoginRequest loginRequest = objectMapper.readValue(request.getInputStream(), LoginRequest.class);
 
         // Create Authentication Object
-        UsernamePasswordAuthenticationToken authObj = new UsernamePasswordAuthenticationToken(loginRequest.getUserName(),
+        UsernamePasswordAuthenticationToken authObj = new UsernamePasswordAuthenticationToken(loginRequest.getEmail(),
                 loginRequest.getPassword());
 
         // validate Authentication object by delegating authObj to Authentication Manager
@@ -45,6 +51,8 @@ public class JWTAuthFilter extends OncePerRequestFilter {
         if(authResult.isAuthenticated())
         {
             // generate jwt token
+            String jwtToken = jwtUtil.generateToken(authResult.getName());
+            response.setHeader("Authorization", "Bearer" + jwtToken);
         }
         else
         {
