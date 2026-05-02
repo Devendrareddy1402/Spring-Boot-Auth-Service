@@ -14,6 +14,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.io.IOException;
 
+/**
+ *  For handles the user login design
+ *  /auth/generateToken end point
+ */
 public class JWTAuthFilter extends OncePerRequestFilter {
 
      private final AuthenticationManager authenticationManager;
@@ -31,7 +35,7 @@ public class JWTAuthFilter extends OncePerRequestFilter {
                                     FilterChain filterChain
     ) throws ServletException, IOException {
 
-         if(!request.getServletPath().equals("/auth/login"))
+         if(!request.getServletPath().equals("/auth/generateToken"))
          {
              filterChain.doFilter(request, response);
              return;
@@ -41,23 +45,27 @@ public class JWTAuthFilter extends OncePerRequestFilter {
         ObjectMapper objectMapper = new ObjectMapper();
         LoginRequest loginRequest = objectMapper.readValue(request.getInputStream(), LoginRequest.class);
 
-        // Create Authentication Object
-        UsernamePasswordAuthenticationToken authObj = new UsernamePasswordAuthenticationToken(loginRequest.getEmail(),
-                loginRequest.getPassword());
-
-        // validate Authentication object by delegating authObj to Authentication Manager
-        Authentication authResult = authenticationManager.authenticate(authObj);
-
-        if(authResult.isAuthenticated())
+        try
         {
-            // generate jwt token
-            String jwtToken = jwtUtil.generateToken(authResult.getName());
-            response.setHeader("Authorization", "Bearer" + jwtToken);
-        }
-        else
-        {
-            // throw error
-        }
+            // Create Authentication Object
+            UsernamePasswordAuthenticationToken authObj = new UsernamePasswordAuthenticationToken(loginRequest.getEmail(),
+                    loginRequest.getPassword());
 
+            // validate Authentication object by delegating authObj to Authentication Manager
+            Authentication authResult = authenticationManager.authenticate(authObj);
+
+            if(authResult.isAuthenticated())
+            {
+                // generate jwt token
+                String jwtToken = jwtUtil.generateToken(authResult.getName());
+                response.setHeader("Authorization", "Bearer " + jwtToken);
+                response.setStatus(HttpServletResponse.SC_OK);
+            }
+
+        }
+        catch (Exception e)
+        {
+            response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Invalid Credentials");
+        }
     }
 }

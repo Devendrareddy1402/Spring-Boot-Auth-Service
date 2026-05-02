@@ -1,16 +1,13 @@
 package com.dev.security.config;
 
 import com.dev.security.filter.JWTAuthFilter;
+import com.dev.security.filter.JWTValidateFilter;
 import com.dev.security.util.JWTUtil;
-import jakarta.servlet.FilterChain;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.ProviderManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
-import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -18,9 +15,10 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import provider.JWTValidationProvider;
 
 import java.util.Arrays;
-import java.util.List;
+
 
 @Configuration
 @EnableWebSecurity
@@ -50,24 +48,38 @@ public class SecurityConfig {
     }
 
     @Bean
-    public AuthenticationManager authManager()
+    JWTValidationProvider jwtValidationProvider()
     {
-       return new ProviderManager(Arrays.asList(daoAuthenticationProvider()))  ;
+        JWTValidationProvider jwtValidationProvider = new JWTValidationProvider(jwtUtil, userDetailsService);
+        return jwtValidationProvider;
+    }
+
+    @Bean
+    public AuthenticationManager authManager() {
+        return new ProviderManager(Arrays.asList(daoAuthenticationProvider(), jwtValidationProvider()));
     }
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http, AuthenticationManager authenticationManager, JWTUtil jwtUtil) throws Exception {
         JWTAuthFilter jwtAuthFilter = new JWTAuthFilter(authenticationManager, jwtUtil);
+        JWTValidateFilter jwtValidFilter = new JWTValidateFilter(authenticationManager, jwtUtil);
         http.authorizeHttpRequests(auth -> auth
-                .requestMatchers("/auth/register", "/auth/login").permitAll()
+                        .requestMatchers("/auth/register","auth/generateToken", "/auth/login").permitAll()
                         .anyRequest().authenticated()
                 )
-                .csrf(csrf-> csrf.disable())
-                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
+                .csrf(csrf -> csrf.disable())
+                .addFilterBefore(jwtValidFilter, UsernamePasswordAuthenticationFilter.class);
+
+
+        // For understanding the User login design with Filter logic.
+//        http.authorizeHttpRequests(auth -> auth
+//                .requestMatchers("/auth/register", "/auth/generateToken").permitAll()
+//                        .anyRequest().authenticated()
+//                )
+//                .csrf(csrf-> csrf.disable())
+//                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
+//                .addFilterAfter(jwtValidFilter, JWTAuthFilter.class);
 
         return http.build();
-
     }
-
-
 }
