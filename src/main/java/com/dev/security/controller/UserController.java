@@ -2,6 +2,7 @@ package com.dev.security.controller;
 
 import com.dev.security.dto.LoginRequest;
 import com.dev.security.dto.LoginResponse;
+import com.dev.security.dto.RefreshRequest;
 import com.dev.security.model.UserAuth;
 import com.dev.security.service.AuthService;
 import com.dev.security.service.UserService;
@@ -43,10 +44,12 @@ public class UserController {
                 .body(loginResponse);
     }
 
-    @GetMapping("/test")
-    public void testing()
+    @PostMapping("/refresh")
+    public ResponseEntity<LoginResponse> refreshToken(@RequestBody RefreshRequest refreshRequest)
     {
-        System.out.println("Testing...");
+        LoginResponse loginResponse  = userService.handleRefresh(refreshRequest.getRefreshToken());
+        return ResponseEntity.ok()
+                .header("Authorization ", "Bearer "+ loginResponse.getAccessToken())
+                .body(loginResponse);
     }
-
 }
