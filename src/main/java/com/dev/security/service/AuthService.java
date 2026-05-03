@@ -5,12 +5,14 @@ import com.dev.security.repository.UserAuthRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 // During the authentication the spring framework fetch the user details
 // if fetches via loadUserByUsername method that's why we are implementing UserDetailsService
 @Service
-public class UserAuthService implements UserDetailsService {
+public class AuthService implements UserDetailsService {
+
 
     @Autowired
     private UserAuthRepository userAuthRepository;
@@ -24,4 +26,5 @@ public class UserAuthService implements UserDetailsService {
     public UserAuth loadUserByUsername(String userName) throws UsernameNotFoundException {
         return userAuthRepository.findByEmail(userName).orElseThrow(()-> new UsernameNotFoundException("User not found"));
     }
+
 }

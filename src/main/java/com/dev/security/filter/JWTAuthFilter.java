@@ -1,7 +1,7 @@
 package com.dev.security.filter;
 
-import com.dev.security.dao.LoginRequest;
-import com.dev.security.util.JWTUtil;
+import com.dev.security.dto.LoginRequest;
+import com.dev.security.service.JWTService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -21,12 +21,12 @@ import java.io.IOException;
 public class JWTAuthFilter extends OncePerRequestFilter {
 
      private final AuthenticationManager authenticationManager;
-     private final JWTUtil jwtUtil;
+     private final JWTService jwtService;
 
-     public JWTAuthFilter(AuthenticationManager authenticationManager, JWTUtil jwtUtil)
+     public JWTAuthFilter(AuthenticationManager authenticationManager, JWTService jwtService)
      {
          this.authenticationManager = authenticationManager;
-         this.jwtUtil = jwtUtil;
+         this.jwtService = jwtService;
      }
 
     @Override
@@ -35,7 +35,7 @@ public class JWTAuthFilter extends OncePerRequestFilter {
                                     FilterChain filterChain
     ) throws ServletException, IOException {
 
-         if(!request.getServletPath().equals("/auth/generateToken"))
+         if(!request.getServletPath().equals("/auth/token"))
          {
              filterChain.doFilter(request, response);
              return;
@@ -57,7 +57,7 @@ public class JWTAuthFilter extends OncePerRequestFilter {
             if(authResult.isAuthenticated())
             {
                 // generate jwt token
-                String jwtToken = jwtUtil.generateToken(authResult.getName());
+                String jwtToken = jwtService.generateToken(authResult.getName());
                 response.setHeader("Authorization", "Bearer " + jwtToken);
                 response.setStatus(HttpServletResponse.SC_OK);
             }

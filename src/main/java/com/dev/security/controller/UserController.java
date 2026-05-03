@@ -1,12 +1,12 @@
 package com.dev.security.controller;
 
-import com.dev.security.dao.LoginRequest;
+import com.dev.security.dto.LoginRequest;
+import com.dev.security.dto.LoginResponse;
 import com.dev.security.model.UserAuth;
-import com.dev.security.service.UserAuthService;
-import com.dev.security.util.JWTUtil;
+import com.dev.security.service.AuthService;
+import com.dev.security.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
@@ -20,27 +20,33 @@ import org.springframework.web.bind.annotation.*;
 public class UserController {
 
     @Autowired
+    private AuthService authService;
+    @Autowired
+    private UserService userService;
+    @Autowired
     private PasswordEncoder passwordEncoder;
-    @Autowired
-    private UserAuthService userAuthService;
-    @Autowired
-    private JWTUtil jwtUtil;
-    @Autowired
-    private AuthenticationManager authenticationManager;
 
     @PostMapping("/register")
     public ResponseEntity<String> createUser(@RequestBody UserAuth userAuth)
     {
         userAuth.setPassword(passwordEncoder.encode(userAuth.getPassword()));
-        userAuthService.save(userAuth);
-
+        authService.save(userAuth);
         return ResponseEntity.ok("User registered Successfully");
     }
 
     @PostMapping("/login")
-    public ResponseEntity<String> loginUser(@RequestBody LoginRequest loginRequest)
+    public ResponseEntity<LoginResponse> loginUser(@RequestBody LoginRequest loginRequest)
     {
-        return ResponseEntity.ok("Successfully Login");
+        LoginResponse loginResponse = userService.handleLogin(loginRequest);
+        return ResponseEntity.ok()
+                .header("Authorization", "Bearer " + loginResponse.getAccessToken())
+                .body(loginResponse);
+    }
+
+    @GetMapping("/test")
+    public void testing()
+    {
+        System.out.println("Testing...");
     }
 
 }

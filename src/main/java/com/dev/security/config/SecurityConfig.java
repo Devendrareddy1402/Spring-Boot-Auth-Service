@@ -1,8 +1,9 @@
 package com.dev.security.config;
 
-import com.dev.security.filter.JWTAuthFilter;
+import com.dev.security.entrypoint.JWTAuthEntryPoint;
 import com.dev.security.filter.JWTValidateFilter;
-import com.dev.security.util.JWTUtil;
+import com.dev.security.provider.JWTValidationProvider;
+import com.dev.security.service.JWTService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -15,7 +16,6 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-import provider.JWTValidationProvider;
 
 import java.util.Arrays;
 
@@ -24,23 +24,24 @@ import java.util.Arrays;
 @EnableWebSecurity
 public class SecurityConfig {
 
-    public UserDetailsService userDetailsService;
-    public JWTUtil jwtUtil;
+    private final UserDetailsService userDetailsService;
+    private final JWTService jwtService;
+    private final JWTAuthEntryPoint jwtAuthEntrypoint;
 
-    public SecurityConfig(JWTUtil jwtUtil, UserDetailsService userDetailsService) {
-        this.jwtUtil = jwtUtil;
+
+    public SecurityConfig(JWTService jwtService, UserDetailsService userDetailsService, JWTAuthEntryPoint jwtAuthEntrypoint) {
+        this.jwtService = jwtService;
         this.userDetailsService = userDetailsService;
+        this.jwtAuthEntrypoint = jwtAuthEntrypoint;
     }
 
     @Bean
-    public PasswordEncoder passwordEncoder()
-    {
+    public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
 
     @Bean
-    public DaoAuthenticationProvider daoAuthenticationProvider()
-    {
+    public DaoAuthenticationProvider daoAuthenticationProvider() {
         DaoAuthenticationProvider provider = new DaoAuthenticationProvider();
         provider.setUserDetailsService(userDetailsService);
         provider.setPasswordEncoder(passwordEncoder());
@@ -48,38 +49,44 @@ public class SecurityConfig {
     }
 
     @Bean
-    JWTValidationProvider jwtValidationProvider()
-    {
-        JWTValidationProvider jwtValidationProvider = new JWTValidationProvider(jwtUtil, userDetailsService);
+    JWTValidationProvider jwtValidationProvider() {
+        JWTValidationProvider jwtValidationProvider = new JWTValidationProvider(jwtService, userDetailsService);
         return jwtValidationProvider;
     }
 
     @Bean
-    public AuthenticationManager authManager() {
+    public AuthenticationManager authenticationManager() {
         return new ProviderManager(Arrays.asList(daoAuthenticationProvider(), jwtValidationProvider()));
     }
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http, AuthenticationManager authenticationManager, JWTUtil jwtUtil) throws Exception {
-        JWTAuthFilter jwtAuthFilter = new JWTAuthFilter(authenticationManager, jwtUtil);
-        JWTValidateFilter jwtValidFilter = new JWTValidateFilter(authenticationManager, jwtUtil);
+    public SecurityFilterChain securityFilterChain(HttpSecurity http,
+                                                   AuthenticationManager authenticationManager,
+                                                   JWTService jwtService) throws Exception {
+        JWTValidateFilter jwtValidFilter = new JWTValidateFilter(authenticationManager, jwtService);
+
         http.authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/auth/register","auth/generateToken", "/auth/login").permitAll()
+                        .requestMatchers("/auth/**").permitAll()
                         .anyRequest().authenticated()
+                )
+                .exceptionHandling(ex -> ex
+                        .authenticationEntryPoint(jwtAuthEntrypoint)
                 )
                 .csrf(csrf -> csrf.disable())
                 .addFilterBefore(jwtValidFilter, UsernamePasswordAuthenticationFilter.class);
 
+        return http.build();
 
         // For understanding the User login design with Filter logic.
-//        http.authorizeHttpRequests(auth -> auth
-//                .requestMatchers("/auth/register", "/auth/generateToken").permitAll()
-//                        .anyRequest().authenticated()
-//                )
-//                .csrf(csrf-> csrf.disable())
-//                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
-//                .addFilterAfter(jwtValidFilter, JWTAuthFilter.class);
-
-        return http.build();
+/*
+            JWTAuthFilter jwtAuthFilter = new JWTAuthFilter(authenticationManager, jwtUtil);
+            http.authorizeHttpRequests(auth -> auth
+                .requestMatchers("/auth/register", "/auth/generateToken").permitAll()
+                        .anyRequest().authenticated()
+                )
+                .csrf(csrf-> csrf.disable())
+                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
+               .addFilterAfter(jwtValidFilter, JWTAuthFilter.class);
+*/
     }
 }

@@ -1,4 +1,4 @@
-package com.dev.security.util;
+package com.dev.security.service;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
@@ -13,7 +13,7 @@ import javax.crypto.SecretKey;
 import java.util.Date;
 
 @Component
-public class JWTUtil {
+public class JWTService {
 
     @Value("${jwt.secret}")
     private String secretKey;
@@ -66,12 +66,6 @@ public class JWTUtil {
     public Boolean isTokenExpired(String token)
     {
         return extractExpirationTime(token).before(new Date());
-    }
-
-    public Boolean validateToken(String token, UserDetails userDetails)
-    {
-        String email = extractEmail(token);
-        return email.equals(userDetails.getUsername()) && !isTokenExpired(token);
     }
 
 }
